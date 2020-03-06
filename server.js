@@ -13,9 +13,6 @@ app.use(cors({optionSuccessStatus: 200}));  // some legacy browsers choke on 204
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
-var monthNames = [ "January", "February", "March", "April", "May", "June", 
-                       "July", "August", "September", "October", "November", "December" ];
-
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
   res.sendFile(__dirname + '/views/index.html');
@@ -27,49 +24,24 @@ app.get("/api/hello", function (req, res) {
   res.json({greeting: 'hello API'});
 });
 
-app.get("/api/timestamp/:date_string", (request, response) => {
-  var timeStamp = request.params.timestamp;
-    
-    var timeObj = {
-        "unix" : null,
-        "natural": null
-    };
-    
-    try {
-        
-        var naturalTime = timeStamp.toString().split(' ');
-        
-        if (naturalTime.length === 3) {
-            
-            var dt = new Date(timeStamp.toString());
-            timeObj["natural"] = timeStamp.toString(); 
-            timeObj["unix"] = dt.valueOf() / 1000;
-            //response.write('Natural Date!');
+app.get("/api/timestamp/:date_string", (req, res) => {
+  let dateString = req.params.date_string;
 
-        } else {
-            throw new Error('Not Natural Date!'); 
-        }
+  //A 4 digit number is a valid ISO-8601 for the beginning of that year
+  //5 digits or more must be a unix time, until we reach a year 10,000 problem
+  if (/\d{5,}/.test(dateString)) {
+   let dateInt = parseInt(dateString);
+    //Date regards numbers as unix timestamps, strings are processed differently
+    res.json({ unix: dateString, utc: new Date(dateInt).toUTCString() });
+  }
 
-    } catch (err1) {
-        console.log(err1);
-        try {
-            
-            var unixTime = Number(timeStamp);
-            
-            if (isNaN(unixTime))  { 
-                throw new Error('Not Unix Timestamp!');
-            } else {
-                timeObj["unix"] = unixTime;
-                
-                var dt = new Date(unixTime * 1000);
-                timeObj["natural"] = monthNames[dt.getMonth()] + " " + dt.getDate() + ", " + dt.getFullYear();
-            } 
-        } catch (err2) {
-            console.log(err2);
-        }
-    }
+  let dateObject = new Date(dateString);
 
-    response.send(timeObj);
+  if (dateObject.toString() === "Invalid Date") {
+    res.json({ error: "Invaid Date" });
+  } else {
+    res.json({ unix: dateObject.valueOf(), utc: dateObject.toUTCString() });
+  }
 });
 
 
